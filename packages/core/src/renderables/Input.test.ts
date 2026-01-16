@@ -211,6 +211,92 @@ describe("InputRenderable", () => {
       expect(input.cursorPosition).toBe(5)
     })
 
+    it("should handle ALT+arrow keys for word movement", () => {
+      const { input } = createInputRenderable({
+        value: "hello world test",
+      })
+
+      input.focus()
+      expect(input.cursorPosition).toBe(16) // Should be at end
+
+      // Move word left: should jump to beginning of "test"
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(12)
+
+      // Move word left: should jump to beginning of "world"
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(6)
+
+      // Move word left: should jump to beginning of "hello"
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(0)
+
+      // Move word left at beginning: should stay at 0
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(0)
+
+      // Move word right: should jump to end of "hello" (space after)
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(5)
+
+      // Move word right: should jump to end of "world"
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(11)
+
+      // Move word right: should jump to end
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(16)
+
+      // Move word right at end: should stay at end
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(16)
+    })
+
+    it("should handle word movement with multiple spaces", () => {
+      const { input } = createInputRenderable({
+        value: "hello  world",
+      })
+
+      input.focus()
+      input.cursorPosition = 12 // At end
+
+      // Move word left: should skip multiple spaces
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(7)
+
+      // Move word left: should jump to beginning
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(0)
+
+      // Move word right: should jump over "hello"
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(5)
+
+      // Move word right: should skip spaces and jump over "world"
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(12)
+    })
+
+    it("should handle word movement from middle of word", () => {
+      const { input } = createInputRenderable({
+        value: "hello world",
+      })
+
+      input.focus()
+      input.cursorPosition = 8 // Middle of "world"
+
+      // Move word left from middle: should jump to beginning of "world"
+      mockInput.pressArrow("left", { meta: true })
+      expect(input.cursorPosition).toBe(6)
+
+      // Set cursor to middle of "hello"
+      input.cursorPosition = 3
+
+      // Move word right from middle: should jump to end of "hello"
+      mockInput.pressArrow("right", { meta: true })
+      expect(input.cursorPosition).toBe(5)
+    })
+
     it("should handle enter key", () => {
       const { input } = createInputRenderable({
         value: "test input",

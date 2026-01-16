@@ -16,6 +16,8 @@ import {
 export type InputAction =
   | "move-left"
   | "move-right"
+  | "move-word-left"
+  | "move-word-right"
   | "move-home"
   | "move-end"
   | "delete-backward"
@@ -39,6 +41,9 @@ const defaultInputKeybindings: InputKeyBinding[] = [
   { name: "f", ctrl: true, action: "move-right" },
   { name: "b", ctrl: true, action: "move-left" },
   { name: "d", ctrl: true, action: "delete-forward" },
+  // ALT+Arrow for word movement
+  { name: "left", meta: true, action: "move-word-left" },
+  { name: "right", meta: true, action: "move-word-right" },
 ]
 
 export interface InputRenderableOptions extends RenderableOptions<InputRenderable> {
@@ -277,6 +282,36 @@ export class InputRenderable extends Renderable {
     }
   }
 
+  private moveCursorWordLeft(): void {
+    const text = this._value
+    let pos = this._cursorPosition
+    if (pos > 0) {
+      pos--
+      while (pos > 0 && /\s/.test(text[pos])) {
+        pos--
+      }
+      while (pos > 0 && /\S/.test(text[pos - 1])) {
+        pos--
+      }
+      this.cursorPosition = pos
+    }
+  }
+
+  private moveCursorWordRight(): void {
+    const text = this._value
+    let pos = this._cursorPosition
+    const len = text.length
+    if (pos < len) {
+      while (pos < len && /\s/.test(text[pos])) {
+        pos++
+      }
+      while (pos < len && /\S/.test(text[pos])) {
+        pos++
+      }
+      this.cursorPosition = pos
+    }
+  }
+
   public handleKeyPress(key: KeyEvent): boolean {
     const bindingKey = getKeyBindingKey({
       name: key.name,
@@ -296,6 +331,12 @@ export class InputRenderable extends Renderable {
           return true
         case "move-right":
           this.cursorPosition = this._cursorPosition + 1
+          return true
+        case "move-word-left":
+          this.moveCursorWordLeft()
+          return true
+        case "move-word-right":
+          this.moveCursorWordRight()
           return true
         case "move-home":
           this.cursorPosition = 0
