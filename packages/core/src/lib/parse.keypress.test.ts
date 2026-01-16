@@ -1783,3 +1783,57 @@ test("parseKeypress - meta+arrow keys with uppercase F and B (old style)", () =>
   expect(metaB.shift).toBe(false)
   expect(metaB.ctrl).toBe(false)
 })
+
+test("parseKeypress - PuTTY double ESC sequences for ALT+arrow keys", () => {
+  // PuTTY in default mode sends double ESC for ALT+arrow keys
+  // Format: ESC ESC [A-D
+
+  // PuTTY ALT+Up: ESC ESC [A
+  const puttyAltUp = parseKeypress("\x1b\x1b[A")!
+  expect(puttyAltUp.name).toBe("up")
+  expect(puttyAltUp.meta).toBe(true)
+  expect(puttyAltUp.option).toBe(true)
+  expect(puttyAltUp.ctrl).toBe(false)
+  expect(puttyAltUp.shift).toBe(false)
+  expect(puttyAltUp.sequence).toBe("\x1b\x1b[A")
+
+  // PuTTY ALT+Down: ESC ESC [B
+  const puttyAltDown = parseKeypress("\x1b\x1b[B")!
+  expect(puttyAltDown.name).toBe("down")
+  expect(puttyAltDown.meta).toBe(true)
+  expect(puttyAltDown.option).toBe(true)
+  expect(puttyAltDown.ctrl).toBe(false)
+  expect(puttyAltDown.shift).toBe(false)
+  expect(puttyAltDown.sequence).toBe("\x1b\x1b[B")
+
+  // PuTTY ALT+Right: ESC ESC [C
+  const puttyAltRight = parseKeypress("\x1b\x1b[C")!
+  expect(puttyAltRight.name).toBe("right")
+  expect(puttyAltRight.meta).toBe(true)
+  expect(puttyAltRight.option).toBe(true)
+  expect(puttyAltRight.ctrl).toBe(false)
+  expect(puttyAltRight.shift).toBe(false)
+  expect(puttyAltRight.sequence).toBe("\x1b\x1b[C")
+
+  // PuTTY ALT+Left: ESC ESC [D
+  const puttyAltLeft = parseKeypress("\x1b\x1b[D")!
+  expect(puttyAltLeft.name).toBe("left")
+  expect(puttyAltLeft.meta).toBe(true)
+  expect(puttyAltLeft.option).toBe(true)
+  expect(puttyAltLeft.ctrl).toBe(false)
+  expect(puttyAltLeft.shift).toBe(false)
+  expect(puttyAltLeft.sequence).toBe("\x1b\x1b[D")
+
+  // Ensure normal arrow keys (single ESC) are NOT interpreted as ALT+arrow
+  const normalUp = parseKeypress("\x1b[A")!
+  expect(normalUp.name).toBe("up")
+  expect(normalUp.meta).toBe(false)
+  expect(normalUp.option).toBe(false)
+  expect(normalUp.ctrl).toBe(false)
+  expect(normalUp.shift).toBe(false)
+
+  const normalRight = parseKeypress("\x1b[C")!
+  expect(normalRight.name).toBe("right")
+  expect(normalRight.meta).toBe(false)
+  expect(normalRight.option).toBe(false)
+})

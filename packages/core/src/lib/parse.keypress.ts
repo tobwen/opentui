@@ -6,6 +6,8 @@ const metaKeyCodeRe = /^(?:\x1b)([a-zA-Z0-9])$/
 
 const fnKeyRe = /^(?:\x1b+)(O|N|\[|\[\[)(?:(\d+)(?:;(\d+))?([~^$])|(?:1;)?(\d+)?([a-zA-Z]))/
 
+const altArrowKeyRe = /^(?:\x1b\x1b)(\[)([A-D])$/
+
 const keyName: Record<string, string> = {
   /* xterm/gnome ESC O letter */
   OP: "f1",
@@ -323,6 +325,15 @@ export const parseKeypress = (s: Buffer | string = "", options: ParseKeypressOpt
     key.meta = true
     key.ctrl = true
     key.name = String.fromCharCode(s.charCodeAt(1) + "a".charCodeAt(0) - 1)
+  } else if ((parts = altArrowKeyRe.exec(s))) {
+    // ALT + arrow keys (PuTTY double ESC sequences: ESC ESC [A-D)
+    key.meta = true
+    key.option = true
+    const arrowCode = parts[1] + parts[2]
+    const arrowKeyName = keyName[arrowCode]
+    if (arrowKeyName) {
+      key.name = arrowKeyName
+    }
   } else if ((parts = fnKeyRe.exec(s))) {
     const segs = [...s]
 

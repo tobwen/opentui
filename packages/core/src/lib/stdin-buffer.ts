@@ -34,6 +34,22 @@ function isCompleteSequence(data: string): "complete" | "incomplete" | "not-esca
 
   const afterEsc = data.slice(1)
 
+  // Double ESC sequences (used by PuTTY for ALT+keys)
+  if (afterEsc.startsWith(ESC)) {
+    // Two ESCs followed by [ means we might have ESC ESC [X (ALT+arrow)
+    if (data.length === 2) {
+      return "incomplete"
+    }
+    if (data.length === 3 && data[2] === "[") {
+      return "incomplete"
+    }
+    // Check for double ESC + CSI arrow key (ESC ESC [A-D)
+    if (data.length >= 4 && data[2] === "[" && data[3] >= "A" && data[3] <= "D") {
+      return "complete"
+    }
+    return "complete"
+  }
+
   // CSI sequences: ESC [
   if (afterEsc.startsWith("[")) {
     // Check for old-style mouse sequence: ESC[M + 3 bytes
