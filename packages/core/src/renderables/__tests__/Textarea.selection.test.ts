@@ -189,6 +189,34 @@ describe("Textarea - Selection Tests", () => {
       expect(editor.getSelectedText()).toBe("World")
     })
 
+    it("should not fire extmark click handlers during drag selection", async () => {
+      const { textarea: editor } = await createTextareaRenderable(currentRenderer, renderOnce, {
+        initialValue: "Hello World",
+        width: 40,
+        height: 10,
+        selectable: true,
+      })
+
+      let count = 0
+      editor.extmarks.create({
+        start: 0,
+        end: 5,
+        onClick: () => {
+          count += 1
+        },
+        onMouseUp: () => {
+          count += 1
+        },
+      })
+
+      await currentMouse.drag(editor.x, editor.y, editor.x + 5, editor.y)
+      await renderOnce()
+
+      expect(editor.hasSelection()).toBe(true)
+      expect(editor.getSelectedText()).toBe("Hello")
+      expect(count).toBe(0)
+    })
+
     it("should render selection properly when drawing to buffer", async () => {
       const buffer = OptimizedBuffer.create(80, 24, "wcwidth")
 

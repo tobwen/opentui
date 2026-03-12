@@ -6,6 +6,7 @@ import { RGBA, parseColor } from "../lib/RGBA.js"
 import type { RenderContext, Highlight, CursorStyleOptions, LineInfoProvider, LineInfo } from "../types.js"
 import type { OptimizedBuffer } from "../buffer.js"
 import { MeasureMode } from "yoga-layout"
+import type { MouseEvent } from "../renderer.js"
 import type { SyntaxStyle } from "../syntax-style.js"
 
 export interface CursorChangeEvent {
@@ -62,6 +63,7 @@ export abstract class EditBufferRenderable extends Renderable implements LineInf
   private _autoScrollAccumulator: number = 0
   private _scrollSpeed: number = 16
   private _keyboardSelectionActive: boolean = false
+  private _mouseOffset: number | undefined
 
   public readonly editBuffer: EditBuffer
   public readonly editorView: EditorView
@@ -352,13 +354,34 @@ export abstract class EditBufferRenderable extends Renderable implements LineInf
     this._scrollSpeed = Math.max(0, value)
   }
 
-  protected override onMouseEvent(event: any): void {
+  protected override onMouseEvent(event: MouseEvent): void {
     if (event.type === "scroll") {
       this.handleScroll(event)
+      return
+    }
+
+    if (event.type === "down") {
+      this._mouseOffset = this.cursorOffset
+    }
+
+    if (event.isDragging) {
+      if (event.type === "up") {
+        this._mouseOffset = undefined
+      }
+      return
+    }
+
+    if (event.type !== "down" && event.type !== "up") return
+    if (!this.editorView.extmarks) return
+
+    this.editorView.extmarks.handleMouseEvent(this._mouseOffset ?? this.cursorOffset, event)
+
+    if (event.type === "up") {
+      this._mouseOffset = undefined
     }
   }
 
-  protected handleScroll(event: any): void {
+  protected handleScroll(event: MouseEvent): void {
     if (!event.scroll) return
 
     const { direction, delta } = event.scroll

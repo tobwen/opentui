@@ -2357,6 +2357,24 @@ Press ESC to return to main menu.`
       const type60Marks = extmarks.getAllForTypeId(60)
       expect(type60Marks.length).toBe(1)
     })
+
+    it("should move an extmark to the updated typeId", async () => {
+      await setup("Hello World")
+
+      const id = extmarks.create({
+        start: 0,
+        end: 5,
+        typeId: 10,
+      })
+
+      expect(extmarks.update(id, { typeId: 20 })).toBe(true)
+      expect(extmarks.getAllForTypeId(10)).toHaveLength(0)
+
+      const marks = extmarks.getAllForTypeId(20)
+      expect(marks).toHaveLength(1)
+      expect(marks[0]?.id).toBe(id)
+      expect(extmarks.get(id)?.typeId).toBe(20)
+    })
   })
 
   describe("Undo/Redo with Extmarks", () => {

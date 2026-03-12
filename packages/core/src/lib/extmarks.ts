@@ -1,6 +1,8 @@
 import type { EditBuffer } from "../edit-buffer.js"
 import type { EditorView } from "../editor-view.js"
+import type { MouseEvent } from "../renderer.js"
 import { ExtmarksHistory, type ExtmarksSnapshot } from "./extmarks-history.js"
+import type { MouseEventType } from "./parse.mouse.js"
 
 export interface Extmark {
   id: number
@@ -11,6 +13,9 @@ export interface Extmark {
   priority?: number
   data?: any
   typeId: number
+  onClick?: (extmarkId: number, event: MouseEvent) => void
+  onMouseDown?: (extmarkId: number, event: MouseEvent) => void
+  onMouseUp?: (extmarkId: number, event: MouseEvent) => void
 }
 
 export interface ExtmarkOptions {
@@ -22,6 +27,9 @@ export interface ExtmarkOptions {
   data?: any
   typeId?: number
   metadata?: any
+  onClick?: (extmarkId: number, event: MouseEvent) => void
+  onMouseDown?: (extmarkId: number, event: MouseEvent) => void
+  onMouseUp?: (extmarkId: number, event: MouseEvent) => void
 }
 
 /**
@@ -651,6 +659,9 @@ export class ExtmarksController {
       priority: options.priority,
       data: options.data,
       typeId,
+      onClick: options.onClick,
+      onMouseDown: options.onMouseDown,
+      onMouseUp: options.onMouseUp,
     }
 
     this.extmarks.set(id, extmark)
@@ -701,6 +712,40 @@ export class ExtmarksController {
   public getAtOffset(offset: number): Extmark[] {
     if (this.destroyed) return []
     return Array.from(this.extmarks.values()).filter((e) => offset >= e.start && offset < e.end)
+  }
+
+  public update(id: number, options: Partial<ExtmarkOptions>): boolean {
+    if (this.destroyed) {
+      throw new Error("ExtmarksController is destroyed")
+    }
+
+    const extmark = this.extmarks.get(id)
+    if (!extmark) return false
+
+    if (options.start !== undefined) extmark.start = options.start
+    if (options.end !== undefined) extmark.end = options.end
+    if (options.virtual !== undefined) extmark.virtual = options.virtual
+    if (options.styleId !== undefined) extmark.styleId = options.styleId
+    if (options.priority !== undefined) extmark.priority = options.priority
+    if (options.data !== undefined) extmark.data = options.data
+    if (options.typeId !== undefined && options.typeId !== extmark.typeId) {
+      this.extmarksByTypeId.get(extmark.typeId)?.delete(id)
+      extmark.typeId = options.typeId
+      if (!this.extmarksByTypeId.has(extmark.typeId)) {
+        this.extmarksByTypeId.set(extmark.typeId, new Set())
+      }
+      this.extmarksByTypeId.get(extmark.typeId)!.add(id)
+    }
+    if (options.onClick !== undefined) extmark.onClick = options.onClick
+    if (options.onMouseDown !== undefined) extmark.onMouseDown = options.onMouseDown
+    if (options.onMouseUp !== undefined) extmark.onMouseUp = options.onMouseUp
+
+    if (options.metadata !== undefined) {
+      this.metadata.set(id, options.metadata)
+    }
+
+    this.updateHighlights()
+    return true
   }
 
   public getAllForTypeId(typeId: number): Extmark[] {
@@ -804,6 +849,32 @@ export class ExtmarksController {
   public getMetadataFor(extmarkId: number): any {
     if (this.destroyed) return undefined
     return this.metadata.get(extmarkId)
+  }
+
+  public handleMouseEvent(offset: number, event: MouseEvent): void {
+    if (this.destroyed) return
+
+    const extmarks = this.getAtOffset(offset)
+    for (const extmark of extmarks) {
+      const handler = this.getEventHandler(extmark, event.type)
+      if (handler) {
+        handler(extmark.id, event)
+      }
+    }
+  }
+
+  private getEventHandler(
+    extmark: Extmark,
+    eventType: MouseEventType,
+  ): ((extmarkId: number, event: MouseEvent) => void) | undefined {
+    switch (eventType) {
+      case "down":
+        return extmark.onMouseDown
+      case "up":
+        return extmark.onMouseUp ?? extmark.onClick
+      default:
+        return undefined
+    }
   }
 
   public destroy(): void {
